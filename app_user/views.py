@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from app_post.models import MarkModel
 from conf import settings
 from app_user import serializers, models
 from app_common.permissions import IsItsOrReadOnly
@@ -193,3 +194,11 @@ class FollowingListView(generics.ListAPIView):
     def get_queryset(self):
         user_id = self.kwargs.get('user_id')
         return models.FollowModel.objects.filter(follower=user_id)
+
+
+class MarkListView(generics.ListAPIView):
+    serializer_class = serializers.MarkSerializer
+
+    def get_queryset(self):
+        user_id = self.kwargs.get('user_id')
+        return MarkModel.objects.filter(user_id=user_id)

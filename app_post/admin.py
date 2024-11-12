@@ -3,6 +3,28 @@ from django.contrib import admin
 from app_post import models
 
 
+@admin.register(models.TagModel)
+class TagModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'tag', 'created_at')
+    list_display_links = list_display
+    search_fields = ('tag', 'id')
+    list_filter = ('created_at',)
+    ordering = ('-created_at',)
+
+
+@admin.register(models.MarkModel)
+class MarkModelAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user__username', 'created_at')
+    list_display_links = list_display
+    search_fields = ('user__username',
+                     'user__email',
+                     'user__phone_number',
+                     'post_description',
+                     'story_description',
+                     'id')
+    list_filter = ('user', 'created_at')
+
+
 @admin.register(models.PostModel)
 class PostModelAdmin(admin.ModelAdmin):
     list_display = ('id', 'user__username', 'description', 'created_at')

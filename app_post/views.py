@@ -12,8 +12,12 @@ class PostListView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         q = self.request.GET.get('q')
+        tag = self.request.GET.get('tag')
         if q:
             self.queryset = self.queryset.filter(description__icontains=q)
+
+        if tag:
+            self.queryset = self.queryset.filter(tags__name=tag)
 
         return self.queryset
 
@@ -25,6 +29,8 @@ class PostByUserListView(generics.ListAPIView):
     def get_queryset(self):
         q = self.request.GET.get('q')
         user_id = self.kwargs.get('user_id')
+        tag = self.kwargs.get('tag')
+
         queryset = models.PostModel.objects.filter(user__id=user_id)
 
         if not queryset.exists():
@@ -32,6 +38,9 @@ class PostByUserListView(generics.ListAPIView):
 
         if q:
             queryset = queryset.filter(description__icontains=q)
+
+        if tag:
+            queryset = queryset.filter(tags__name=tag)
 
         return queryset
 
@@ -48,8 +57,13 @@ class StoryListView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         q = self.request.GET.get('q')
+        tag = self.request.GET.get('tag')
+
         if q:
             self.queryset = self.queryset.filter(description__icontains=q)
+
+        if tag:
+            self.queryset = self.queryset.filter(tags__name=tag)
 
         return self.queryset
 
@@ -171,3 +185,20 @@ class LikeCommentView(generics.ListCreateAPIView):
 
         serializer.save(comment_id=comment.pk)
         return Response(serializer.data, status.HTTP_200_OK)
+
+
+class TagListView(generics.ListAPIView):
+    queryset = models.TagModel.objects.all()
+    serializer_class = serializers.TagSerializer
+
+    def get_queryset(self):
+        q = self.request.GET.get('q')
+        if q:
+            self.queryset = self.queryset.filter(tag__icontains=q)
+
+        return self.queryset
+
+
+class TagDetailView(generics.RetrieveAPIView):
+    queryset = models.TagModel.objects.all()
+    serializer_class = serializers.TagSerializer

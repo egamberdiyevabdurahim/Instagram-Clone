@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from app_common.views import email_validator
+from app_post.models import MarkModel
 from app_user.models import VerifyCodeModel, FollowModel
 
 UserModel = get_user_model()
@@ -107,23 +108,77 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if self.context['request'].user != instance:
-            data['is_following'] = (
-                FollowModel.objects.filter(
-                    follower_id=self.context['request'].user.id, followed=instance
-                ).exists()
-            )
+        request_user = self.context['request'].user
 
+        if request_user != instance:
+            data['is_following'] = FollowModel.objects.filter(
+                follower_id=request_user.id, followed=instance
+            ).exists()
         else:
             data['comments_count'] = instance.comments_count
             data['likes_count'] = instance.likes_count
             data['story_likes_count'] = instance.story_likes_count
             data['comment_likes_count'] = instance.comment_likes_count
 
-        data['followers'] = instance.followers_count
-        data['following'] = instance.following_count
+        data['followers_count'] = instance.followers_count
+        data['following_count'] = instance.following_count
         data['posts_count'] = instance.posts_count
         data['stories_count'] = instance.stories_count
+
+        data['followers'] = [
+            {
+                'id': follower.pk,
+                'user_id': follower.follower.pk,
+                'username': follower.follower.username,
+                'is_i_follow': True if FollowModel.objects.filter(followed__pk=follower.pk, follower__pk=instance.pk).exists() else False
+            }
+            for follower in instance.followers.all()
+        ]
+        data['following'] = [
+            {
+                'id': following.pk,
+                'user_id': following.followed.pk,
+                'username': following.followed.username,
+                'is_followed': True if FollowModel.objects.filter(followed__pk=instance.pk, follower__pk=instance.pk).exists() else False
+            }
+            for following in instance.following.all()
+        ]
+        data['posts'] = [
+            {
+                'id': post.pk,
+                'description': post.description[:33]
+            }
+            for post in instance.posts.all()
+        ]
+        data['stories'] = [
+            {
+                'id': story.pk,
+                'description': story.description[:33]
+            }
+            for story in instance.stories.all()
+        ]
+        data['comments'] = [
+            {
+                'id': comment.pk,
+                'post_id': comment.post.pk,
+                'post_description': comment.post.description[:33],
+                'comment': comment.comment[:33]
+            }
+            for comment in instance.comments.all()
+        ]
+
+        data['marks_count'] = instance.marks_count
+        data['marks'] = [
+            {
+                'id': mark.pk,
+                'post_id': mark.post.pk if mark.post else None,
+                'post_description': mark.post.description[:33] if mark.post else None,
+                'story_id': mark.story.pk if mark.story else None,
+                'story_description': mark.story.description[:33] if mark.story else None
+            }
+            for mark in instance.marks.all()
+        ]
+
         return data
 
 
@@ -212,4 +267,26 @@ class FollowSerializer(serializers.ModelSerializer):
                 'username': instance.followed.username,
                 'email': instance.followed.email,
             }
+        return data
+
+
+class MarkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarkModel
+        fields = ['user', 'post', 'story']
+        read_only_fields = ['user', 'post', 'story']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['data'] = [
+            {
+                'user_id': instance.user.pk,
+                'user_username': instance.user.username,
+                'user_email': instance.user.email,
+                'post_id': instance.post.pk if instance.post else None,
+                'post_description': instance.post.description[:33] if instance.post else None,
+                'story_id': instance.story.pk if instance.story else None,
+                'story_description': instance.story.description[:33] if instance.story else None,
+            }
+        ]
         return data

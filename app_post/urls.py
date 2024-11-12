@@ -17,4 +17,7 @@ urlpatterns = [
     path('story/', views.StoryListView.as_view()),
     path('story/<int:pk>/', views.StoryDetailView.as_view()),
     path('story/<int:story_id>/like/', views.LikeStoryView.as_view()),
+
+    path('tag/', views.TagListView.as_view()),
+    path('tag/<int:pk>/', views.TagDetailView.as_view()),
 ]

@@ -43,6 +43,10 @@ class UserModel(AbstractUser):
     def comment_likes_count(self):
         return self.comment_likes.count()
 
+    @property
+    def marks_count(self):
+        return self.marks.count()
+
 
 class FollowModel(models.Model):
     follower = models.ForeignKey(UserModel, related_name='following', on_delete=models.CASCADE)
