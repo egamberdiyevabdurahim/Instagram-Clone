@@ -194,8 +194,8 @@ class PostSerializer(serializers.ModelSerializer):
 class StorySerializer(serializers.ModelSerializer):
     class Meta:
         model = models.StoryModel
-        fields = ['id', 'photo', 'video', 'description', 'user', 'tags']
-        read_only_fields = ['user', 'tags']
+        fields = ['id', 'photo', 'video', 'description', 'user', 'tags', 'views']
+        read_only_fields = ['user', 'tags', 'views']
 
     def validate(self, attrs):
         if self.context['request'].method == 'POST':

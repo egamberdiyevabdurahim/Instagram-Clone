@@ -81,6 +81,12 @@ class StoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.StorySerializer
     permission_classes = [IsOwnerOrReadOnly]
 
+    def get_object(self):
+        obj = super().get_object()
+        obj.views += 1
+        obj.save()
+        return obj
+
 
 class CommentListView(generics.ListAPIView):
     queryset = models.CommentPostModel.objects.all()
