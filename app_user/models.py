@@ -7,6 +7,7 @@ class UserModel(AbstractUser):
     phone_number = models.CharField(max_length=14, unique=True)
     avatar = models.ImageField(upload_to='User/', null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
+    is_private = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.username}/{self.email}/{self.phone_number}"

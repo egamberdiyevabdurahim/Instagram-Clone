@@ -8,6 +8,7 @@ urlpatterns = [
     path('<int:pk>/', views.PostDetailView.as_view()),
     path('user/<int:user_id>/', views.PostByUserListView.as_view()),
     path('<int:post_id>/like/', views.LikePostView.as_view()),
+    path('<int:post_id>/connect/user/', views.ConnectUserToPostView.as_view()),
 
     path('comment/', views.CommentListView.as_view()),
     path('<int:post_id>/comment/', views.CommentByPostListView.as_view()),
@@ -20,4 +21,6 @@ urlpatterns = [
 
     path('tag/', views.TagListView.as_view()),
     path('tag/<int:pk>/', views.TagDetailView.as_view()),
+
+    path('top/', views.TopPostsView.as_view()),
 ]

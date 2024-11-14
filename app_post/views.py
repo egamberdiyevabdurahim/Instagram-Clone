@@ -1,9 +1,11 @@
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from app_post import serializers, models
 from app_common.permissions import IsOwnerOrReadOnly
+from app_user.serializers import UserModel
 
 
 class PostListView(generics.ListCreateAPIView):
@@ -49,6 +51,12 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.PostModel.objects.all()
     serializer_class = serializers.PostSerializer
     permission_classes = [IsOwnerOrReadOnly]
+
+    def get_object(self):
+        obj = super().get_object()
+        obj.views += 1
+        obj.save()
+        return obj
 
 
 class StoryListView(generics.ListCreateAPIView):
@@ -202,3 +210,38 @@ class TagListView(generics.ListAPIView):
 class TagDetailView(generics.RetrieveAPIView):
     queryset = models.TagModel.objects.all()
     serializer_class = serializers.TagSerializer
+
+
+class TopPostsView(generics.ListAPIView):
+    serializer_class = serializers.PostSerializer
+
+    def get_queryset(self):
+        queryset = models.PostModel.objects.filter(views__gt=1).order_by('-views')
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(title__icontains=q)
+
+        return queryset
+
+
+class ConnectUserToPostView(APIView):
+    serializer_class = serializers.ConnectUsersToPostSerializer
+
+    def post(self, request, post_id):
+        post = models.PostModel.objects.filter(pk=post_id, is_deleted=False)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not post.exists():
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        post = post.first()
+        user = UserModel.objects.filter(pk=serializer.validated_data.get('user_id')).first()
+
+        if user in post.connected_users.all():
+            post.connected_users.remove(user)
+            return Response({'error': 'User unconnected from the post successfully'}, status=status.HTTP_200_OK)
+
+        post.connected_users.add(user)
+        post.save()
+        return Response({'message': 'User connected to the post successfully'}, status=status.HTTP_200_OK)

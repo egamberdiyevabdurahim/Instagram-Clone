@@ -90,8 +90,8 @@ class PostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.PostModel
-        fields = ['id', 'photos', 'videos', 'description', 'user', 'tags']
-        read_only_fields = ['user', 'tags']
+        fields = ['id', 'photos', 'videos', 'description', 'user', 'tags', 'views']
+        read_only_fields = ['user', 'tags', 'views']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -102,49 +102,57 @@ class PostSerializer(serializers.ModelSerializer):
             'phone_number': instance.user.phone_number
         }
 
-        user = self.context['request'].user
-        data['is_liked'] = instance.likes.filter(user=user).exists()
+        if instance.user.is_private is False:
+            data['connected_users'] = [
+                {'id': user.pk, 'username': user.username} if user else None
+                for user in instance.connected_users.all()
+            ]
+            user = self.context['request'].user
+            data['is_liked'] = instance.likes.filter(user=user).exists()
 
-        data['total_likes'] = instance.likes_count
-        data['likes'] = [
-            {'id': like.pk, 'user': {'id': like.user.pk, 'username': like.user.username}}
-            for like in instance.likes.all()
-        ]
+            data['total_likes'] = instance.likes_count
+            data['likes'] = [
+                {'id': like.pk, 'user': {'id': like.user.pk, 'username': like.user.username}}
+                for like in instance.likes.all()
+            ]
 
-        data['total_comments'] = instance.comments_count
-        data['comments'] = [{
-            'id': comment.pk,
-            'user': {
-                'id': comment.user.pk,
-                'username': comment.user.username
-            },
-            'comment': comment.comment}
-            for comment in instance.comments.all()
-        ]
-
-        data['tags_count'] = instance.tags_count
-        data['tags'] = [
-            {
-                'id': tag.pk,
-                'tag': tag.tag
-            }
-            for tag in instance.tags.all()
-        ]
-
-        data['marks_count'] = instance.marks_count
-        data['marks'] = [
-            {
-                'id': mark.pk,
+            data['total_comments'] = instance.comments_count
+            data['comments'] = [{
+                'id': comment.pk,
                 'user': {
-                    'id': mark.user.pk,
-                    'username': mark.user.username
-                }
-            }
-            for mark in instance.marks.all()
-        ]
+                    'id': comment.user.pk,
+                    'username': comment.user.username
+                },
+                'comment': comment.comment}
+                for comment in instance.comments.all()
+            ]
 
-        data['photos'] = [{'id': photo.pk, 'url': photo.photo.url} for photo in instance.photos.all()]
-        data['videos'] = [{'id': video.pk, 'url': video.video.url} for video in instance.videos.all()]
+            data['tags_count'] = instance.tags_count
+            data['tags'] = [
+                {
+                    'id': tag.pk,
+                    'tag': tag.tag
+                }
+                for tag in instance.tags.all()
+            ]
+
+            data['marks_count'] = instance.marks_count
+            data['marks'] = [
+                {
+                    'id': mark.pk,
+                    'user': {
+                        'id': mark.user.pk,
+                        'username': mark.user.username
+                    }
+                }
+                for mark in instance.marks.all()
+            ]
+
+            data['photos'] = [{'id': photo.pk, 'url': photo.photo.url} for photo in instance.photos.all()]
+            data['videos'] = [{'id': video.pk, 'url': video.video.url} for video in instance.videos.all()]
+
+        else:
+            data['message'] = "This Video is uploaded by private account"
 
         return data
 
@@ -201,42 +209,47 @@ class StorySerializer(serializers.ModelSerializer):
                         'username': instance.user.username,
                         'email': instance.user.email,
                         'phone_number': instance.user.phone_number}
-        user = self.context['request'].user
-        if user.is_authenticated:
-            data['is_liked'] = instance.likes.filter(user=user).exists()
+
+        if instance.user.is_private is False:
+            user = self.context['request'].user
+            if user.is_authenticated:
+                data['is_liked'] = instance.likes.filter(user=user).exists()
+
+            else:
+                data['is_liked'] = False
+
+            data['total_likes'] = instance.likes_count
+            data['likes'] = []
+            if instance.likes.exists():
+                for likes in instance.likes.all():
+                    data['likes'].append({'id': likes.pk,
+                                          'user': {'id': likes.user.pk,
+                                                   'username': likes.user.username}
+                                          })
+
+            data['tags_count'] = instance.tags_count
+            data['tags'] = [
+                {
+                    'id': tag.pk,
+                    'tag': tag.tag
+                }
+                for tag in instance.tags.all()
+            ]
+
+            data['marks_count'] = instance.marks_count
+            data['marks'] = [
+                {
+                    'id': mark.pk,
+                    'user': {
+                        'id': mark.user.pk,
+                        'username': mark.user.username
+                    }
+                }
+                for mark in instance.marks.all()
+            ]
 
         else:
-            data['is_liked'] = False
-
-        data['total_likes'] = instance.likes_count
-        data['likes'] = []
-        if instance.likes.exists():
-            for likes in instance.likes.all():
-                data['likes'].append({'id': likes.pk,
-                                      'user': {'id': likes.user.pk,
-                                               'username': likes.user.username}
-                                      })
-
-        data['tags_count'] = instance.tags_count
-        data['tags'] = [
-            {
-                'id': tag.pk,
-                'tag': tag.tag
-            }
-            for tag in instance.tags.all()
-        ]
-
-        data['marks_count'] = instance.marks_count
-        data['marks'] = [
-            {
-                'id': mark.pk,
-                'user': {
-                    'id': mark.user.pk,
-                    'username': mark.user.username
-                }
-            }
-            for mark in instance.marks.all()
-        ]
+            data['message'] = "This Video is uploaded by private account"
 
         return data
     
@@ -273,21 +286,27 @@ class CommentPostSerializer(serializers.ModelSerializer):
                         'username': instance.user.username,
                         'email': instance.user.email,
                         'phone_number': instance.user.phone_number}
-        user = self.context['request'].user
-        if user.is_authenticated:
-            data['is_liked'] = instance.likes.filter(user=user).exists()
+
+        if instance.post.user.is_private is False:
+            user = self.context['request'].user
+            if user.is_authenticated:
+                data['is_liked'] = instance.likes.filter(user=user).exists()
+
+            else:
+                data['is_liked'] = False
+
+            data['total_likes'] = instance.likes_count
+            data['likes'] = []
+            if instance.likes.exists():
+                for likes in instance.likes.all():
+                    data['likes'].append({'id': likes.pk,
+                                          'user': {'id': likes.user.pk,
+                                                   'username': likes.user.username}
+                                        })
 
         else:
-            data['is_liked'] = False
+            data['message'] = "This Video is uploaded by private account"
 
-        data['total_likes'] = instance.likes_count
-        data['likes'] = []
-        if instance.likes.exists():
-            for likes in instance.likes.all():
-                data['likes'].append({'id': likes.pk,
-                                      'user': {'id': likes.user.pk,
-                                               'username': likes.user.username}
-                                      })
         return data
     
     def create(self, validated_data):
@@ -309,13 +328,18 @@ class LikePostSerializer(serializers.ModelSerializer):
                             'username': instance.user.username,
                             'email': instance.user.email,
                             'phone_number': instance.user.phone_number}
-            data['post'] = {'id': instance.post.pk,
-                            'description': instance.post.description[:33],
-                            'user': {'id': instance.post.user.pk,
-                                     'username': instance.post.user.username,
-                                     'email': instance.post.user.email,
-                                     'phone_number': instance.post.user.phone_number}
-                            }
+
+            if instance.post.user.is_private is False:
+                data['post'] = {'id': instance.post.pk,
+                                'description': instance.post.description[:33],
+                                'user': {'id': instance.post.user.pk,
+                                         'username': instance.post.user.username,
+                                         'email': instance.post.user.email,
+                                         'phone_number': instance.post.user.phone_number}
+                                }
+
+            else:
+                data['message'] = "This Video is uploaded by private account"
         return data
 
 
@@ -339,13 +363,18 @@ class LikeStorySerializer(serializers.ModelSerializer):
                             'username': instance.user.username,
                             'email': instance.user.email,
                             'phone_number': instance.user.phone_number}
-            data['story'] = {'id': instance.story.pk,
-                             'description': instance.story.description,
-                             'user': {'id': instance.user.pk,
-                                      'username': instance.user.username,
-                                      'email': instance.user.email,
-                                      'phone_number': instance.user.phone_number}
-                             }
+
+            if instance.story.user.is_private is False:
+                data['story'] = {'id': instance.story.pk,
+                                 'description': instance.story.description,
+                                 'user': {'id': instance.user.pk,
+                                          'username': instance.user.username,
+                                          'email': instance.user.email,
+                                          'phone_number': instance.user.phone_number}
+                                 }
+
+            else:
+                data['message'] = "This Story is uploaded by private account"
         return data
 
     def create(self, validated_data):
@@ -367,6 +396,7 @@ class LikeCommentSerializer(serializers.ModelSerializer):
                             'username': instance.user.username,
                             'email': instance.user.email,
                             'phone_number': instance.user.phone_number}
+
             data['comment'] = {'id': instance.comment.pk,
                                'comment': instance.comment.comment,
                                'user': {'id': instance.user.pk,
@@ -380,3 +410,13 @@ class LikeCommentSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         like = models.LikeCommentModel.objects.create(user=user, **validated_data)
         return like
+
+
+class ConnectUsersToPostSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True)
+
+    def validate_user_id(self, value):
+        if not UserModel.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("User not found.")
+
+        return value

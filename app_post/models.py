@@ -48,9 +48,11 @@ class TagModel(BaseModel):
 class PostModel(BaseModel):
     description = models.TextField()
     user = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, related_name='posts')
+    connected_users = models.ManyToManyField(UserModel, related_name='connected_posts')
     photos = models.ManyToManyField(PhotoModel, related_name='posts')
     videos = models.ManyToManyField(VideoModel, related_name='posts')
     tags = models.ManyToManyField(TagModel, related_name='posts')
+    views = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = 'Post'
@@ -91,6 +93,7 @@ class StoryModel(BaseModel):
     tags = models.ManyToManyField(TagModel, related_name='stories')
     description = models.TextField()
     is_cached = models.BooleanField(default=False)
+    views = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = 'Story'

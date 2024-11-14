@@ -104,7 +104,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserModel
-        fields = ('id', 'username', 'email', 'phone_number', 'first_name', 'last_name')
+        fields = ('id', 'username', 'email', 'phone_number', 'first_name', 'last_name', 'is_private')
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -125,59 +125,60 @@ class ProfileSerializer(serializers.ModelSerializer):
         data['posts_count'] = instance.posts_count
         data['stories_count'] = instance.stories_count
 
-        data['followers'] = [
-            {
-                'id': follower.pk,
-                'user_id': follower.follower.pk,
-                'username': follower.follower.username,
-                'is_i_follow': True if FollowModel.objects.filter(followed__pk=follower.pk, follower__pk=instance.pk).exists() else False
-            }
-            for follower in instance.followers.all()
-        ]
-        data['following'] = [
-            {
-                'id': following.pk,
-                'user_id': following.followed.pk,
-                'username': following.followed.username,
-                'is_followed': True if FollowModel.objects.filter(followed__pk=instance.pk, follower__pk=instance.pk).exists() else False
-            }
-            for following in instance.following.all()
-        ]
-        data['posts'] = [
-            {
-                'id': post.pk,
-                'description': post.description[:33]
-            }
-            for post in instance.posts.all()
-        ]
-        data['stories'] = [
-            {
-                'id': story.pk,
-                'description': story.description[:33]
-            }
-            for story in instance.stories.all()
-        ]
-        data['comments'] = [
-            {
-                'id': comment.pk,
-                'post_id': comment.post.pk,
-                'post_description': comment.post.description[:33],
-                'comment': comment.comment[:33]
-            }
-            for comment in instance.comments.all()
-        ]
+        if instance.is_private is False:
+            data['followers'] = [
+                {
+                    'id': follower.pk,
+                    'user_id': follower.follower.pk,
+                    'username': follower.follower.username,
+                    'is_i_follow': True if FollowModel.objects.filter(followed__pk=follower.pk, follower__pk=instance.pk).exists() else False
+                }
+                for follower in instance.followers.all()
+            ]
+            data['following'] = [
+                {
+                    'id': following.pk,
+                    'user_id': following.followed.pk,
+                    'username': following.followed.username,
+                    'is_followed': True if FollowModel.objects.filter(followed__pk=instance.pk, follower__pk=instance.pk).exists() else False
+                }
+                for following in instance.following.all()
+            ]
+            data['posts'] = [
+                {
+                    'id': post.pk,
+                    'description': post.description[:33]
+                }
+                for post in instance.posts.all()
+            ]
+            data['stories'] = [
+                {
+                    'id': story.pk,
+                    'description': story.description[:33]
+                }
+                for story in instance.stories.all()
+            ]
+            data['comments'] = [
+                {
+                    'id': comment.pk,
+                    'post_id': comment.post.pk,
+                    'post_description': comment.post.description[:33],
+                    'comment': comment.comment[:33]
+                }
+                for comment in instance.comments.all()
+            ]
 
-        data['marks_count'] = instance.marks_count
-        data['marks'] = [
-            {
-                'id': mark.pk,
-                'post_id': mark.post.pk if mark.post else None,
-                'post_description': mark.post.description[:33] if mark.post else None,
-                'story_id': mark.story.pk if mark.story else None,
-                'story_description': mark.story.description[:33] if mark.story else None
-            }
-            for mark in instance.marks.all()
-        ]
+            data['marks_count'] = instance.marks_count
+            data['marks'] = [
+                {
+                    'id': mark.pk,
+                    'post_id': mark.post.pk if mark.post else None,
+                    'post_description': mark.post.description[:33] if mark.post else None,
+                    'story_id': mark.story.pk if mark.story else None,
+                    'story_description': mark.story.description[:33] if mark.story else None
+                }
+                for mark in instance.marks.all()
+            ]
 
         return data
 
